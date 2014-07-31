@@ -157,6 +157,7 @@ public class JsModelWriter implements ModelWriter {
             buffer.write("/**\n");
             buffer.write(" * An interface representing the host application to the script.\n");
             buffer.write(" * @global\n");
+            buffer.write(" * @type {Host}\n");
             buffer.write(" */\n");
             buffer.write("var host = new Host();\n");
         }
