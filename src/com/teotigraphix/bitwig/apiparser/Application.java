@@ -19,6 +19,9 @@
 
 package com.teotigraphix.bitwig.apiparser;
 
+import java.io.File;
+import java.io.IOException;
+
 import com.teotigraphix.bitwig.apiparser.core.APIParser;
 import com.teotigraphix.bitwig.apiparser.core.ParserConfig;
 
@@ -29,18 +32,24 @@ import com.teotigraphix.bitwig.apiparser.core.ParserConfig;
 public class Application {
 
     // TODO command line configs
-    private static final String SOURCE_DIR = "C:/Users/Teoti/Downloads/_Bitwig/BitwigJavaAPI"
-            + "/com/bitwig/base/control_surface/iface";
+    private static final String SOURCE_DIR = "resources/src/com/bitwig/base/control_surface/iface";
 
-    private static final String OUTPUT_DIR = "C:/Users/Teoti/Desktop/api";
+    private static final String OUTPUT_DIR = "resources/output";
 
     /**
      * @param args
      */
     public static void main(String[] args) {
-        ParserConfig config = new ParserConfig(SOURCE_DIR, OUTPUT_DIR, "1.0.11");
+        ParserConfig config = new ParserConfig(SOURCE_DIR, OUTPUT_DIR, "API 1.1");
+        config.setChangesFile(new File(OUTPUT_DIR, "BitwigStudio-API-Changes.html"));
 
         APIParser parser = new APIParser(config);
         parser.parse();
+
+        try {
+            parser.build();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

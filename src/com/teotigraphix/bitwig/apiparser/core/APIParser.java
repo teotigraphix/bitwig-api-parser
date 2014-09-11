@@ -23,10 +23,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 
+import com.teotigraphix.bitwig.apiparser.writer.ChangesWriter;
 import com.teotigraphix.bitwig.apiparser.writer.JsModelWriter;
 import com.thoughtworks.qdox.JavaProjectBuilder;
 import com.thoughtworks.qdox.model.DocletTag;
@@ -44,43 +47,64 @@ import com.thoughtworks.qdox.model.impl.DefaultJavaMethod;
  */
 public class APIParser {
 
-    private File sourceDirectory;
+    private List<Version> versions = new ArrayList<Version>();
 
-    private File outputDirectory;
+    private Map<String, List<JavaMethod>> sinceMethods = new HashMap<String, List<JavaMethod>>();
 
-    private String version;
+    private JavaProjectBuilder builder;
+
+    private ParserConfig config;
+
+    public List<Version> getVersions() {
+        return versions;
+    }
+
+    public JavaProjectBuilder getBuilder() {
+        return builder;
+    }
+
+    public List<JavaMethod> getSinceMethods(String key) {
+        return sinceMethods.get(key);
+    }
 
     public APIParser(ParserConfig config) {
-        this.sourceDirectory = config.getSourceDirectory();
-        this.outputDirectory = config.getOutputDirectory();
-        this.version = config.getVersion();
+        this.config = config;
+        builder = new JavaProjectBuilder();
+        builder.addSourceTree(config.getSourceDirectory());
     }
 
     public void parse() {
-        final JavaProjectBuilder builder = new JavaProjectBuilder();
-
-        builder.addSourceTree(sourceDirectory);
-
         analyzeDocComments(builder.getSources());
+    }
 
+    public void build() throws IOException {
         Collection<JavaClass> classes = builder.getClasses();
+
+        buildAPIStubs(classes);
+        buildAPIChanges(classes);
+    }
+
+    private void buildAPIStubs(Collection<JavaClass> classes) throws IOException {
         for (JavaClass javaClass : classes) {
             if (javaClass.isInner())
                 continue;
 
-            JsModelWriter writer = new JsModelWriter(version);
+            JsModelWriter writer = new JsModelWriter(config.getVersion());
             writer.writeSource(javaClass.getSource());
 
             String fileName = javaClass.getName();
-            File target = new File(outputDirectory, fileName + IWriterConstants.JS);
+            File target = new File(config.getOutputDirectory(), fileName + IWriterConstants.JS);
             String data = writer.toString();
 
-            try {
-                save(target, data);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            save(target, data);
         }
+    }
+
+    private void buildAPIChanges(Collection<JavaClass> classes) throws IOException {
+        ChangesWriter writer = new ChangesWriter(this);
+
+        String data = writer.write();
+        save(config.getChangesFile(), data);
     }
 
     private void analyzeDocComments(Collection<JavaSource> sources) {
@@ -96,6 +120,7 @@ public class APIParser {
                 analyzeParameters(dmethod, list);
                 analyzeReturns(dmethod, list);
                 analyzeThrows(dmethod, list);
+                analyzeSince(dmethod, list);
 
                 dmethod.setTags(list);
             }
@@ -143,6 +168,25 @@ public class APIParser {
         }
     }
 
+    private void analyzeSince(DefaultJavaMethod dmethod, List<DocletTag> list) {
+        DocletTag tag = dmethod.getTagByName(IWriterConstants.TAG_SINCE);
+        if (tag != null) {
+            list.add(tag);
+            addSince(dmethod, tag);
+        }
+    }
+
+    private void addSince(DefaultJavaMethod method, DocletTag tag) {
+        final Version version = new Version(tag.getValue().replace("Bitwig Studio", "").trim());
+        List<JavaMethod> list = sinceMethods.get(version.get());
+        if (list == null) {
+            list = new ArrayList<JavaMethod>();
+            sinceMethods.put(version.get(), list);
+            versions.add(version);
+        }
+        list.add(method);
+    }
+
     private static void save(File target, String data) throws IOException {
         FileUtils.write(target, data);
     }
@@ -150,4 +194,5 @@ public class APIParser {
     private static String toExceptionSimpleName(String qualifiedName) {
         return qualifiedName.replace("com.bitwig.base.control_surface.", "").replace("$", ".");
     }
+
 }

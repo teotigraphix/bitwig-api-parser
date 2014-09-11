@@ -33,6 +33,8 @@ public class ParserConfig {
 
     private String version;
 
+    private File changesFile;
+
     public File getSourceDirectory() {
         return sourceDirectory;
     }
@@ -43,6 +45,14 @@ public class ParserConfig {
 
     public String getVersion() {
         return version;
+    }
+
+    public File getChangesFile() {
+        return changesFile;
+    }
+
+    public void setChangesFile(File changesFile) {
+        this.changesFile = changesFile;
     }
 
     public ParserConfig(String source, String output, String version) {

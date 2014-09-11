@@ -41,13 +41,42 @@ import com.thoughtworks.qdox.model.expression.Expression;
 import com.thoughtworks.qdox.writer.ModelWriter;
 import com.thoughtworks.qdox.writer.impl.IndentBuffer;
 
+/**
+ * @author Michael Schmalle
+ * @since 1.0
+ */
 public class JsModelWriter implements ModelWriter {
-
-    private IndentBuffer buffer = new IndentBuffer();
 
     private int enumFieldCounter;
 
+    private IndentBuffer buffer = new IndentBuffer();
+
     private String version;
+
+    private static Map<String, String> typeConversions;
+
+    static {
+        typeConversions = new HashMap<String, String>();
+
+        typeConversions.put("int", "int");
+        typeConversions.put("double", "double");
+        typeConversions.put("boolean", "boolean");
+
+        typeConversions.put("java.lang.Number", "number");
+        typeConversions.put("java.lang.Object", "Object");
+        typeConversions.put("java.lang.String", "string");
+
+        typeConversions.put("byte[]", "byte[]");
+        typeConversions.put("java.lang.Object[]", "Object[]");
+        typeConversions.put("java.lang.String[]", "String[]");
+
+        typeConversions.put("org.mozilla.javascript.Callable", "function");
+        typeConversions.put("org.mozilla.javascript.Function", "function");
+    }
+
+    protected final IndentBuffer getBuffer() {
+        return buffer;
+    }
 
     public JsModelWriter(String version) {
         this.version = version;
@@ -323,24 +352,7 @@ public class JsModelWriter implements ModelWriter {
         }
     }
 
-    private String getJsType(String genericFullName) {
-        Map<String, String> typeConversions = new HashMap<String, String>();
-
-        typeConversions.put("int", "int");
-        typeConversions.put("double", "double");
-        typeConversions.put("boolean", "boolean");
-
-        typeConversions.put("java.lang.Number", "number");
-        typeConversions.put("java.lang.Object", "Object");
-        typeConversions.put("java.lang.String", "string");
-
-        typeConversions.put("byte[]", "byte[]");
-        typeConversions.put("java.lang.Object[]", "Object[]");
-        typeConversions.put("java.lang.String[]", "String[]");
-
-        typeConversions.put("org.mozilla.javascript.Callable", "function");
-        typeConversions.put("org.mozilla.javascript.Function", "function");
-
+    protected String getJsType(String genericFullName) {
         if (typeConversions.containsKey(genericFullName)) {
             String name = typeConversions.get(genericFullName);
             return name;
